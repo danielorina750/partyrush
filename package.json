@@ -1,0 +1,13 @@
+{
+  "name": "odd-one-out-party-rush",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "TV-first multiplayer party mini-game with browser phone controllers",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "test": "node --test tests/*.test.mjs",
+    "dev": "node scripts/dev.mjs"
+  },
+  "engines": {"node": ">=20"}
+}

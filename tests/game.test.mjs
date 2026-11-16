@@ -1,0 +1,12 @@
+import test from 'node:test';import assert from 'node:assert/strict';
+import {getOddId,makePlayer,updateAction,ranking} from '../public/logic.js';
+import {createAblyJwt} from '../api/token.js';import {roomCode,createHostProof,verifyHostProof} from '../api/room.js';
+test('odd one selection detects unique vote',()=>{const p=['up','down','down','down'].map((vote,i)=>({id:String(i),vote}));assert.equal(getOddId(p),'0');assert.equal(getOddId(p.map(x=>({...x,vote:'up'}))),null);assert.equal(getOddId(p.map((x,i)=>({...x,vote:i%2?'down':'up'}))),null);});
+test('missing vote disallows selection',()=>assert.equal(getOddId([{id:'1',vote:'up'},{id:'2',vote:null},{id:'3',vote:'down'}]),null));
+test('runner must travel there and back',()=>{const p=makePlayer('a','Alex');for(let i=0;i<40;i++)assert.equal(updateAction(p,i%2?'right':'left','rush','other',1000+i*150),true);assert.equal(p.run,200);assert.equal(p.arrived,true);assert.equal(p.roundScore,350);assert.equal(updateAction(p,'right','rush','other',8000),false);});
+test('odd player only can collect food',()=>{const p=makePlayer('odd','Odd');assert.equal(updateAction(p,'bite','rush','odd',1000),true);assert.equal(p.roundScore,10);assert.equal(updateAction(p,'bite','rush','odd',1060),false);assert.equal(updateAction(p,'left','rush','odd',1200),false);});
+test('ranking',()=>assert.equal(ranking([{score:1,name:'a'},{score:10,name:'b'}])[0].name,'b'));
+test('host proof cannot be forged by joiner',()=>{const room=roomCode(),key='secret';assert.match(room,/^[A-Z2-9]{8}$/);const proof=createHostProof(room,key);assert.equal(verifyHostProof(room,proof,key),true);assert.equal(verifyHostProof(room+'Z',proof,key),false);assert.equal(verifyHostProof(room,'fake',key),false);});
+test('JWT has channel permissions and does not expose key',()=>{const t=createAblyJwt('key.name:secret','ABCDEFGH','player','someplayer123');const payload=JSON.parse(Buffer.from(t.split('.')[1],'base64url').toString());assert.equal(payload['x-ably-clientId'],'someplayer123');assert.deepEqual(JSON.parse(payload['x-ably-capability'])['party:ABCDEFGH:state'],['subscribe']);assert.equal(t.includes('secret'),false);});
+
+test('same foot does not move runner twice',()=>{const p=makePlayer('a','A');assert.equal(updateAction(p,'left','rush','odd',1000),true);assert.equal(updateAction(p,'left','rush','odd',2000),false);assert.equal(updateAction(p,'right','rush','odd',2200),true);assert.equal(p.run,10);});
